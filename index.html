@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="game-board"></div>
+    <button id="restart">Restart</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js"
+        integrity="sha512-0zGLOFv/+OQ6YfVCSGDQWhrDRx0ONmBqWvs3gI4olm8i6xtKoG1FhEnB4eTaWCVnojyfUDgE8Izeln+mAJAkFA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+        </script>
+    <script>
+        const restartEl = document.getElementById("restart");
+        let grid = [];
+        let cols = 10; // Número de columnas
+        let rows = 10; // Número de filas
+        let w = 40; // Tamaño de cada celda
+        let totalMines = 20; // Número total de minas
+
+        function setup() {
+            createCanvas(cols * w, rows * w);
+            // Crear las celdas
+            for (let x = 0; x < cols; x++) {
+                grid[x] = [];
+                for (let y = 0; y < rows; y++) {
+                    grid[x][y] = new Cell(x, y, w);
+                }
+            }
+
+            // Colocar las minas
+            let options = [];
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    options.push([x, y]);
+                }
+            }
+            for (let n = 0; n < totalMines; n++) {
+                let index = floor(random(options.length));
+                let choice = options[index];
+                let x = choice[0];
+                let y = choice[1];
+                options.splice(index, 1); // Quitar opción usada
+                grid[x][y].mine = true;
+            }
+
+            // Calcular vecinos
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    grid[x][y].countMines();
+                }
+            }
+        }
+
+        function draw() {
+            background(255);
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    grid[x][y].show();
+                }
+            }
+        }
+
+        function mousePressed() {
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    if (grid[x][y].contains(mouseX, mouseY)) {
+                        if (mouseButton === LEFT) {
+                            grid[x][y].reveal();
+                            if (grid[x][y].mine) {
+                                gameOver();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function gameOver() {
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    grid[x][y].revealed = true;
+                }
+            }
+            console.log("Game Over!");
+        }
+
+        class Cell {
+            constructor(x, y, w) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.mine = false;
+                this.revealed = false;
+                this.neighborCount = 0;
+            }
+
+            show() {
+                stroke(0);
+                noFill();
+                rect(this.x * this.w, this.y * this.w, this.w, this.w);
+                if (this.revealed) {
+                    if (this.mine) {
+                        fill(127);
+                        ellipse(
+                            this.x * this.w + this.w * 0.5,
+                            this.y * this.w + this.w * 0.5,
+                            this.w * 0.5
+                        );
+                    } else {
+                        fill(200);
+                        rect(this.x * this.w, this.y * this.w, this.w, this.w);
+                        if (this.neighborCount > 0) {
+                            fill(0);
+                            textAlign(CENTER);
+                            text(
+                                this.neighborCount,
+                                this.x * this.w + this.w * 0.5,
+                                this.y * this.w + this.w - 10
+                            );
+                        }
+                    }
+                }
+            }
+
+            contains(x, y) {
+                return (
+                    x > this.x * this.w &&
+                    x < this.x * this.w + this.w &&
+                    y > this.y * this.w &&
+                    y < this.y * this.w + this.w
+                );
+            }
+
+            reveal() {
+                this.revealed = true;
+                if (this.neighborCount === 0) {
+                    this.floodFill();
+                }
+            }
+
+            countMines() {
+                if (this.mine) {
+                    this.neighborCount = -1;
+                    return;
+                }
+                let total = 0;
+                for (let xoff = -1; xoff <= 1; xoff++) {
+                    for (let yoff = -1; yoff <= 1; yoff++) {
+                        let i = this.x + xoff;
+                        let j = this.y + yoff;
+                        if (i > -1 && i < cols && j > -1 && j < rows) {
+                            let neighbor = grid[i][j];
+                            if (neighbor.mine) {
+                                total++;
+                            }
+                        }
+                    }
+                }
+                this.neighborCount = total;
+            }
+
+            floodFill() {
+                for (let xoff = -1; xoff <= 1; xoff++) {
+                    for (let yoff = -1; yoff <= 1; yoff++) {
+                        let i = this.x + xoff;
+                        let j = this.y + yoff;
+                        if (i > -1 && i < cols && j > -1 && j < rows) {
+                            let neighbor = grid[i][j];
+                            if (!neighbor.revealed && !neighbor.mine) {
+                                neighbor.reveal();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        restartEl.addEventListener("click", () => {
+            setup();
+        });
+    </script>
+</body>
+
+</html>
